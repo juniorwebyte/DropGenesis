@@ -1,0 +1,41 @@
+{
+  "name": "WebyteHub DROP",
+  "version": "1.0.0",
+  "description": "Ecosystem Initializer & Activation Core",
+  "driver": "native",
+  "requirements": {
+    "php": ">=8.2",
+    "extensions": ["mysqli", "mysqlnd", "pdo_mysql", "curl", "mbstring", "dom", "json", "ctype"],
+    "dirs_writable": ["storage", "config"],
+    "package_manifest": "install/pacote.json"
+  },
+  "database": {
+    "sql_file": "database/base.sql",
+    "config_file": "config/local.php",
+    "optional_migrations": [
+      {
+        "file": "database/hardening.sql",
+        "label": "apply_hardening",
+        "hint": "apply_hardening_sub"
+      },
+      {
+        "file": "database/structure.sql",
+        "label": "apply_schema",
+        "hint": "apply_schema_sub"
+      },
+      {
+        "file": "database/phase2.sql",
+        "label": "apply_phase2",
+        "hint": "apply_phase2_sub"
+      }
+    ]
+  },
+  "license": {
+    "verify_url": ""
+  },
+  "defaults": {
+    "site_name": "Drop",
+    "db_name": "dropsync_api",
+    "admin_user": "admin"
+  }
+}

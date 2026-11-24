@@ -1,0 +1,35 @@
+/*
+ * Geist Sans / Geist Mono
+ * =========================================================================
+ *
+ * O projeto apontava para `cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist.css`,
+ * mas esse arquivo não existe no pacote npm `geist` (retorna 404) — o pacote
+ * publica apenas os binários das fontes. Resultado: nenhuma página carregava a
+ * família e todo o layout caía no sans-serif genérico do sistema.
+ *
+ * Aqui declaramos as duas famílias com os nomes que o CSS do projeto já usa
+ * ('Geist Sans' e 'Geist Mono'), consumindo os binarios servidos pelo proprio instalador (src/Fonts/).
+ *
+ * O CDN saiu: o DropGenesis e o instalador, e roda justamente onde o ambiente
+ * ainda nao esta pronto — rede restrita, servidor recem-provisionado, maquina
+ * sem saida para a internet. Depender de jsdelivr para desenhar a tela de
+ * instalacao e depender do problema que a instalacao vai resolver.
+ */
+
+@font-face {
+    font-family: 'Geist Sans';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../Fonts/Geist-Variable.woff2') format('woff2-variations'),
+         url('../Fonts/Geist-Variable.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Geist Mono';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../Fonts/GeistMono-Variable.woff2') format('woff2-variations'),
+         url('../Fonts/GeistMono-Variable.woff2') format('woff2');
+}

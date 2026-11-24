@@ -1,0 +1,110 @@
+# ==========================================================================
+# DropGenesis — proteção da pasta do instalador
+# ==========================================================================
+#
+# A versão anterior deste arquivo tinha três problemas:
+#
+#   RewriteCond ../storage/installed\.lock -f
+#     O primeiro argumento de RewriteCond é uma string a ser avaliada, e um
+#     caminho relativo como "../storage/..." não é resolvido contra a pasta do
+#     .htaccess. A condição nunca era satisfeita, então a regra de bloqueio
+#     jamais disparava — o instalador seguia acessível depois de instalado.
+#
+#   RewriteCond %{REQUEST_URI} !/install/post-check\.php$
+#     A exceção liberava "/install/post-check.php". A pasta chama-se
+#     DropGenesis; esse caminho não existe. Se o bloqueio tivesse funcionado,
+#     teria derrubado junto o diagnóstico que a linha pretendia preservar.
+#
+#   Nada protegia as classes PHP, o manifesto nem os arquivos de idioma.
+#
+# A trava efetiva é a checagem de storage/installed.lock feita em PHP no topo
+# de index.php e de ajax.php — ela funciona em qualquer servidor, inclusive
+# nginx e IIS, onde este arquivo sequer é lido. O que está aqui é a camada
+# adicional para Apache.
+# ==========================================================================
+
+# Sem listagem de diretório.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloqueio pós-instalação — restrito a arquivos .php.
+    #
+    # A versão anterior usava `RewriteRule ^`, que casa com QUALQUER caminho.
+    # Depois de instalado, isso devolvia 403 para tudo dentro da pasta:
+    # imagens do fundo, scroll-bg.js, geist.css e a própria logomarca. Medido
+    # no container Docker do projeto, com a trava presente:
+    #
+    #   /DropGenesis/                       -> 403 (Apache, antes do PHP)
+    #   /DropGenesis/src/Images/scroll/1.webp -> 403
+    #   /DropGenesis/src/Js/scroll-bg.js      -> 403
+    #
+    # Ou seja: a tela de "instalador bloqueado" nem chegava a ser renderizada
+    # pelo PHP, e quando renderizava vinha sem fundo, sem scroll e sem estilo.
+    #
+    # Agora a regra casa apenas com `.php`, e ainda abre exceção para os
+    # arquivos que fazem a própria verificação de estado (index e ajax devolvem
+    # a tela/JSON de bloqueio) e para os diagnósticos. Assets estáticos nunca
+    # são tocados.
+    # A trava é procurada ao lado desta pasta, e não em %{DOCUMENT_ROOT}: numa
+    # instalação em subpasta (public_html/loja/) o DOCUMENT_ROOT é o do domínio,
+    # e a trava de /loja nunca era encontrada. As duas primeiras condições tiram
+    # do caminho em disco a pasta do site (%1) e testam a trava dentro dela.
+    # "DropGenesis[^/]*" porque, instalado, o instalador se renomeia para
+    # DropGenesis_disabled_<data> — e é nesse estado que esta regra importa.
+    RewriteCond %{REQUEST_FILENAME} ^(.+)/DropGenesis[^/]*/
+    RewriteCond %1/storage/installed.lock -f
+    RewriteCond %{REQUEST_URI} !/(index|ajax|post-check|health-check)\.php$ [NC]
+    RewriteCond %{REQUEST_URI} !/(errors|update)/ [NC]
+    RewriteRule \.php$ - [F,L]
+
+    # As classes do motor são carregadas pelo autoloader, nunca pela URL.
+    # Servi-las diretamente expõe estrutura interna e mensagens de erro.
+    RewriteRule ^src/(Core|Drivers|Contracts|Languages)/ - [F,L]
+</IfModule>
+
+# Manifesto, licença e documentação de texto não precisam ser públicos.
+<FilesMatch "^(drop\.json|license\.txt|readme\.txt|composer\.(json|lock))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# --------------------------------------------------------------------------
+# Cache dos assets
+# --------------------------------------------------------------------------
+# As imagens do fundo em scroll somam dezenas de megabytes e são as mesmas em
+# todas as telas do instalador. Sem cabeçalho de cache, cada navegação entre
+# index, health-check, post-check e check rebaixava tudo de novo.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/png  "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType image/avif "access plus 30 days"
+    ExpiresByType image/x-icon "access plus 30 days"
+    ExpiresByType text/css   "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "\.(png|jpe?g|webp|avif|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=2592000, immutable"
+    </FilesMatch>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+    # O instalador nunca deve ser cacheado: as telas refletem estado real.
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json
+</IfModule>

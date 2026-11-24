@@ -58,7 +58,7 @@ DropGenesis is designed to provide PHP applications with a reliable, secure and 
 | **Version**       | `@version`                                  |
 | **Website**       | https://webytehub.com                       |
 | **Documentation** | https://docs.webytehub.com                  |
-| **Repository**    | https://github.com/juniorwebyte/dropgenesis |
+| **Repository**    | https://github.com/juniorwebyte/DropGenesis |
 
 ---
 
